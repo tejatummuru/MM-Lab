@@ -140,11 +140,19 @@ int uinit() {
  */
 void *umalloc(size_t size) {
     memory_block_t *cur = free_head;
+    //sort the blocks in ascending order
+    while (cur > cur->next){
+        cur = cur->next;
+    }
+    {
+        /* code */
+    }
+    
     while(cur->next != NULL){ //when it reaches NULL we are at the end of the list
-        if(cur->block_size_alloc <= size){
-            //return the size of the block that we wanted, but how do we do portions?
-            return;
-        }
+        // if(cur->block_size_alloc <= size){
+        //     //return the size of the block that we wanted, but how do we do portions?
+        //     return;
+        // }
         cur = free_head->next;
     }
     return NULL;
