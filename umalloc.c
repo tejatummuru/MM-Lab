@@ -209,25 +209,25 @@ void *umalloc(size_t size) {
  * todo
  */
 void ufree(void *ptr) {
-    memory_block_t *compare = get_block(ptr);
-    deallocate(ptr);
-    put_block(compare, get_size(compare), is_allocated(compare));
-    //get_block to translate to payload->block
-    //put_block to make free block and then while loop
-    memory_block_t *cur = free_head;
-    //do i just call put instead of a;ll this?
-    bool added = false;
-    while (cur->next != NULL && added == false){
-        printf("going in and not coming out");
-        //just compare pointers
-        if(compare < cur){
-            compare->next = cur->next;
-            cur->next = ptr;
-            added = true;
-            return;
-        }
-        cur = cur->next;
-    }
-    cur->next = ptr;
+    // memory_block_t *compare = get_block(ptr);
+    // deallocate(ptr);
+    // put_block(compare, get_size(compare), is_allocated(compare));
+    // //get_block to translate to payload->block
+    // //put_block to make free block and then while loop
+    // memory_block_t *cur = free_head;
+    // //do i just call put instead of a;ll this?
+    // bool added = false;
+    // while (cur->next != NULL && added == false){
+    //     printf("going in and not coming out");
+    //     //just compare pointers
+    //     if(compare < cur){
+    //         compare->next = cur->next;
+    //         cur->next = ptr;
+    //         added = true;
+    //         return;
+    //     }
+    //     cur = cur->next;
+    // }
+    // cur->next = ptr;
     //where do we access the list/add to the free list?
 }
