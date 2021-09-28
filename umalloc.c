@@ -94,6 +94,15 @@ memory_block_t *get_block(void *payload) {
  * todo
  */
 memory_block_t *find(size_t size) {
+    // memory_block_t *cur = free_head;
+    // bool found = false;
+    // while(cur->next != NULL && found == false){
+    //     if(get_size(cur) >= size){
+    //         found = true;
+    //         return cur;
+    //     }
+    //     cur = cur->next;
+    // }
     return NULL;
 }
 
@@ -102,6 +111,7 @@ memory_block_t *find(size_t size) {
  * todo
  */
 memory_block_t *extend(size_t size) {
+    csbrk(16 * PAGESIZE);
     return NULL;
 }
 
@@ -110,6 +120,7 @@ memory_block_t *extend(size_t size) {
  * todo
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
+
     return NULL;
 }
 
@@ -130,7 +141,14 @@ memory_block_t *coalesce(memory_block_t *block) {
  */
 int uinit() {
     free_head = csbrk(PAGESIZE);
-   //how do i set the metadata? like allocated = true? where do i do that? also where is the pointer's next? do i build that somwhere?
+    free_head->block_size_alloc = 0;
+    free_head->next = free_head->next;
+    //set size, next, 
+   //how do i set the metadata? like allocated = true? where do i do that? also where do i do the if else for this
+
+   if(free_head == NULL){
+       return -1;
+   }
     return 0;
 }
 
@@ -141,19 +159,22 @@ int uinit() {
 void *umalloc(size_t size) {
     memory_block_t *cur = free_head;
     //sort the blocks in ascending order
-    while (cur > cur->next){
-        cur = cur->next;
-    }
-    {
-        /* code */
-    }
     
-    while(cur->next != NULL){ //when it reaches NULL we are at the end of the list
-        // if(cur->block_size_alloc <= size){
-        //     //return the size of the block that we wanted, but how do we do portions?
-        //     return;
-        // }
-        cur = free_head->next;
+    if(cur->block_size_alloc == size){ //or do we do get_size() here?
+        allocate(cur);
+        return get_payload(cur);
+    }else if(cur->block_size_alloc > size){ //do split later but for now, just get rid of the block
+        // memory_block_t *result = cur;
+        // result = split(cur, size);
+        allocate(cur);
+        return get_payload(cur);
+    }else if(cur->block_size_alloc < size){
+        //we want to check the free list
+        cur = cur->next;
+        //and then return a new block
+        if(cur->next == NULL){
+            free_head = csbrk(size);
+        }
     }
     return NULL;
 }
@@ -164,6 +185,25 @@ void *umalloc(size_t size) {
  * todo
  */
 void ufree(void *ptr) {
+    memory_block_t *compare = get_block(ptr);
+    deallocate(ptr);
+    put_block(compare, get_size(compare), is_allocated(compare));
+    //get_block to translate to payload->block
+    //put_block to make free block and then while loop
+    memory_block_t *cur = free_head;
+    //do i just call put instead of a;ll this?
+    bool added = false;
+    while (cur->next != NULL && added == false){
+        printf("going in and not coming out");
+        //just compare pointers
+        if(compare < cur){
+            compare->next = cur->next;
+            cur->next = ptr;
+            added = true;
+            return;
+        }
+        cur = cur->next;
+    }
+    cur->next = ptr;
     //where do we access the list/add to the free list?
-    free_head->next = free_head->next->next;
 }
