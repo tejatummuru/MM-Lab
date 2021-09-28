@@ -162,7 +162,7 @@ void *umalloc(size_t size) {
     }
     put_block(cur, get_size(cur), true);
     allocate(cur);
-    return cur;
+    return get_payload(cur);
 
     // memory_block_t *cur = free_head;
     // memory_block_t *prev = free_head;
