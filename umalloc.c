@@ -94,15 +94,15 @@ memory_block_t *get_block(void *payload) {
  * todo
  */
 memory_block_t *find(size_t size) {
-    // memory_block_t *cur = free_head;
-    // bool found = false;
-    // while(cur->next != NULL && found == false){
-    //     if(get_size(cur) >= size){
-    //         found = true;
-    //         return cur;
-    //     }
-    //     cur = cur->next;
-    // }
+    memory_block_t *cur = free_head;
+    bool found = false;
+    while(cur->next != NULL && found == false){
+        if(get_size(cur) >= size){
+            found = true;
+            return cur;
+        }
+        cur = cur->next;
+    }
     return NULL;
 }
 
@@ -156,7 +156,7 @@ int uinit() {
  */
 void *umalloc(size_t size) {
 
-    memory_block_t *cur = free_head;
+    memory_block_t *cur = find(size);
     if(cur == NULL){
         cur = extend(size);
     }
