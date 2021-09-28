@@ -96,7 +96,7 @@ memory_block_t *get_block(void *payload) {
 memory_block_t *find(size_t size) {
     memory_block_t *cur = free_head;
     bool found = false;
-    while(cur != NULL && found == false){
+    while(cur->next != NULL && found == false){
         printf("entering the loop");
         if(get_size(cur) >= size){
             found = true;
