@@ -111,8 +111,7 @@ memory_block_t *find(size_t size) {
  * todo
  */
 memory_block_t *extend(size_t size) {
-    csbrk(16 * PAGESIZE);
-    return NULL;
+    return csbrk(16 * PAGESIZE);
 }
 
 /*
@@ -156,36 +155,45 @@ int uinit() {
  * todo
  */
 void *umalloc(size_t size) {
+
     memory_block_t *cur = free_head;
-    memory_block_t *prev = free_head;
-    //sort the blocks in ascending order
-    bool found = false;
-    while (found == false){
-        if(get_size(cur)- sizeof(memory_block_t) == size){ //or do we do get_size() here?
-            found = true;
-            allocate(cur); //take it out of free list
-            prev->next = cur->next;
-            // cur->next = cur->next->next; //is this how we remove from the free list?
-            return get_payload(cur);
-        }else if(get_size(cur) - sizeof(memory_block_t) > size){ //do split later but for now, just get rid of the block
-            // memory_block_t *result = cur;
-            // result = split(cur, size);
-            found = true;
-            allocate(cur);
-            prev->next = cur->next;
-            // cur->next = cur->next->next; //is this how we remove from the free list?
-            return get_payload(cur);
-        }else if(cur->block_size_alloc < size){
-            if(cur->next == NULL){
-                free_head = csbrk(size);
-                found = true;
-            }
-            //we want to check the free list
-            prev = cur;
-            cur = cur->next; //loop
-            //and then return a new block  
-        }
+    if(cur == NULL){
+        cur = extend(size);
     }
+    put_block(cur, get_size(cur), true);
+    allocate(cur);
+    return cur;
+
+    // memory_block_t *cur = free_head;
+    // memory_block_t *prev = free_head;
+    // //sort the blocks in ascending order
+    // bool found = false;
+    // while (found == false){
+    //     if(get_size(cur)- sizeof(memory_block_t) == size){ //or do we do get_size() here?
+    //         found = true;
+    //         allocate(cur); //take it out of free list
+    //         prev->next = cur->next;
+    //         // cur->next = cur->next->next; //is this how we remove from the free list?
+    //         return get_payload(cur);
+    //     }else if(get_size(cur) - sizeof(memory_block_t) > size){ //do split later but for now, just get rid of the block
+    //         // memory_block_t *result = cur;
+    //         // result = split(cur, size);
+    //         found = true;
+    //         allocate(cur);
+    //         prev->next = cur->next;
+    //         // cur->next = cur->next->next; //is this how we remove from the free list?
+    //         return get_payload(cur);
+    //     }else if(cur->block_size_alloc < size){
+    //         if(cur->next == NULL){
+    //             free_head = csbrk(size);
+    //             found = true;
+    //         }
+    //         //we want to check the free list
+    //         prev = cur;
+    //         cur = cur->next; //loop
+    //         //and then return a new block  
+    //     }
+    // }
     
     
     return NULL;
