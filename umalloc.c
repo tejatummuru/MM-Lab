@@ -97,6 +97,7 @@ memory_block_t *find(size_t size) {
     memory_block_t *cur = free_head;
     bool found = false;
     while(cur != NULL && found == false){
+        printf("entering the loop");
         if(get_size(cur) >= size){
             found = true;
             return cur;
@@ -141,6 +142,7 @@ memory_block_t *coalesce(memory_block_t *block) {
 int uinit() {
     free_head = csbrk(PAGESIZE * 12);
     put_block(free_head, PAGESIZE * 12, false);
+    // free_head->next = NULL;
     //set size, next, 
    //how do i set the metadata? like allocated = true? where do i do that? also where do i do the if else for this
 
@@ -168,7 +170,9 @@ void *umalloc(size_t size) {
     // memory_block_t *prev = free_head;
     // //sort the blocks in ascending order
     // bool found = false;
+
     // while (found == false){
+    //     printf("entering the loop");
     //     if(get_size(cur)- sizeof(memory_block_t) == size){ //or do we do get_size() here?
     //         found = true;
     //         allocate(cur); //take it out of free list
