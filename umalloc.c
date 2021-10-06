@@ -173,7 +173,8 @@ memory_block_t *coalesce(memory_block_t *block) {
     if(temp == block && !is_allocated(bfree)){
         bfree = findBefore(block);
         bfree = (memory_block_t*)((char*) bfree + sizeof(memory_block_t) + get_size(block));
-        put_block(bfree, get_size(bfree) + get_size(block) + sizeof(memory_block_t), false);
+        size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
+        put_block(bfree, gmath , false);
         bfree->next = sbnext;
     }
     bfree = block->next;
@@ -184,7 +185,8 @@ memory_block_t *coalesce(memory_block_t *block) {
     temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
     if(temp == block && !is_allocated(block->next)){
         bfree = (memory_block_t*)((char*) bfree + sizeof(memory_block_t) + get_size(block));
-        put_block(bfree, get_size(bfree) + get_size(block) + sizeof(memory_block_t), false);
+        size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
+        put_block(bfree, gmath , false);
         if(block->next != NULL){
             bfree->next = sbnext;
         }
