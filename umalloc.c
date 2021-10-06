@@ -5,7 +5,6 @@
 #include <assert.h>
 
 const char author[] = ANSI_BOLD ANSI_COLOR_RED "TEJASVINI TUMMURU TT26586" ANSI_RESET;
-
 /*
  * The following helpers can be used to interact with the memory_block_t
  * struct, they can be adjusted as necessary.
@@ -167,11 +166,10 @@ memory_block_t *split(memory_block_t *block, size_t size) {
 memory_block_t *coalesce(memory_block_t *block) {
     //make sure the payload is being added correctly and the temp is getting the right values
     //make sure the next and prev are right next to each other by adding the size the header and size of the payload and seeing if it adds to the next
-    memory_block_t *bfree = block; 
+    memory_block_t *bfree = findBefore(block); 
     memory_block_t *temp = (memory_block_t*)((char*)bfree + sizeof(memory_block_t) + get_size(block));
     memory_block_t *sbnext = block->next;
     if(temp == block && !is_allocated(bfree)){
-        bfree = findBefore(block);
         bfree = (memory_block_t*)((char*) bfree + sizeof(memory_block_t) + get_size(block));
         size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
         put_block(bfree, gmath , false);
@@ -202,9 +200,9 @@ memory_block_t *coalesce(memory_block_t *block) {
  * todo
  */
 int uinit() {
-    free_head = csbrk(PAGESIZE * 12);
-    ftotal += PAGESIZE * 12;
-    put_block(free_head, PAGESIZE * 12, false);
+    free_head = csbrk(PAGESIZE * 5);
+    ftotal += PAGESIZE * 5;
+    put_block(free_head, PAGESIZE * 5, false);
     // free_head->next = NULL;
     //set size, next, 
    //how do i set the metadata? like allocated = true? where do i do that? also where do i do the if else for this
