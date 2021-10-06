@@ -149,11 +149,14 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     //(the size of the block - the size we want allocated since we do not want to reassign the pointers),, 
     //if there is an error check if we add temp to itself,, do i call malloc on this? you don't because i would call split 
     //in malloc which would lead to a lgic error
-    temp = (memory_block_t*) ((char*)temp + (sizeof(memory_block_t) + (get_size(block) - size)));
+    temp = (memory_block_t*) ((char*)temp + (sizeof(memory_block_t) + (get_size(block) - size))); //allocated?
     //once we have moved the pointer, we want to clarify this as a new block that is taken
-    put_block(temp, get_size(temp), true);
+    size_t sblock = get_size(temp);
+    put_block(temp, sblock, true);
     //make sure the other block is free, but do we need to put and return another block for that?
-    put_block(bfree, get_size(block) - sizeof(temp), false);
+    //math outside
+    size_t math = get_size(block) - sizeof(temp);
+    put_block(bfree, math, false);
     return temp;
 }
 
@@ -223,6 +226,7 @@ void *umalloc(size_t size) {
     if (get_size(cur) > size){
         cur = split(cur, size);
     }
+    //if no more space and at end of list then coalesce and then extend
     // else if(get_size(cur) < size){
     //     cur = coalesce(cur);
     // }
@@ -288,7 +292,7 @@ void ufree(void *ptr) {
     bool added = false;
     while (cur->next != NULL && added == false){
         //just compare pointers
-        if(compare < cur){
+        if(compare < cur){ //& working?
             //change prev?
             compare->next = cur;
             added = true;

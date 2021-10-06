@@ -60,7 +60,7 @@ int check_heap() {
             }
         }  
     //checking to see if the blocks are aligned correctly (Q3)
-        //goes through every single block on the free list until it reaches the end (Q10)
+        //goes through every single block on the free list until it reaches the end 
         while (cur->next != NULL) {
             //if a block is aligned to the 16 bit size it returns -1 if not
             if(get_size(cur) % 16 != 0){
