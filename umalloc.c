@@ -221,7 +221,15 @@ void *umalloc(size_t size) {
     
     memory_block_t *cur = find(size);
     if(cur == NULL){
-        cur = extend(size);
+        cur = free_head;
+        while (cur->next != NULL){
+            coalesce(cur);
+            cur = cur->next;
+        }
+        cur = find(size);
+        if(cur == NULL){
+            cur = extend(size);
+        }
     }
     if (get_size(cur) > size){
         cur = split(cur, size);
