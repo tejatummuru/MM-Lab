@@ -166,30 +166,33 @@ memory_block_t *split(memory_block_t *block, size_t size) {
 memory_block_t *coalesce(memory_block_t *block) {
     //make sure the payload is being added correctly and the temp is getting the right values
     //make sure the next and prev are right next to each other by adding the size the header and size of the payload and seeing if it adds to the next
-    memory_block_t *bfree = findBefore(block); 
-    memory_block_t *temp = (memory_block_t*)((char*)bfree + sizeof(memory_block_t) + get_size(block));
+    // memory_block_t *bfree = findBefore(block); 
+    // memory_block_t *temp = (memory_block_t*)((char*)bfree + sizeof(memory_block_t) + get_size(block));
+    //header 
     memory_block_t *sbnext = block->next;
-    if(temp == block && !is_allocated(bfree)){
-        bfree = (memory_block_t*)((char*) bfree + sizeof(memory_block_t) + get_size(block));
-        size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
-        put_block(bfree, gmath , false);
-        bfree->next = sbnext;
-    }
-    bfree = block->next;
+    //no previous needed
+    //only coalesce when free
+    // if(temp == block && !is_allocated(bfree)){
+    //     bfree = (memory_block_t*)((char*) get_size(bfree) + sizeof(memory_block_t) + get_size(block));
+    //     size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
+    //     put_block(bfree, gmath , false);
+    //     bfree->next = sbnext;
+    // }
+    memory_block_t *bfree = sbnext;
     if(block->next != NULL){
             sbnext = bfree->next;
     }
     //pointers can't move backwards can they? this isn't illegal tho?
-    temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
+    memory_block_t *temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
     if(temp == block && !is_allocated(block->next)){
-        bfree = (memory_block_t*)((char*) bfree + sizeof(memory_block_t) + get_size(block));
+        // bfree = (memory_block_t*)((char*) block + sizeof(memory_block_t) + get_size(bfree));
         size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
-        put_block(bfree, gmath , false);
-        if(block->next != NULL){
-            bfree->next = sbnext;
+        put_block(block, gmath , false);
+        if(bfree->next != NULL){
+            block->next = sbnext;
         }
     }
-    return bfree;
+    return block;
 }
 
 
@@ -234,10 +237,6 @@ void *umalloc(size_t size) {
     if (get_size(cur) > size){
         cur = split(cur, size);
     }
-    //if no more space and at end of list then coalesce and then extend
-    // else if(get_size(cur) < size){
-    //     cur = coalesce(cur);
-    // }
     put_block(cur, get_size(cur), true);
     allocate(cur);
     //must remove from free liost
@@ -247,40 +246,6 @@ void *umalloc(size_t size) {
     }
     ftotal-=size;
     return get_payload(cur);
-
-    // memory_block_t *cur = free_head;
-    // memory_block_t *prev = free_head;
-    // //sort the blocks in ascending order
-    // bool found = false;
-
-    // while (found == false){
-    //     if(get_size(cur)- sizeof(memory_block_t) == size){ //or do we do get_size() here?
-    //         found = true;
-    //         allocate(cur); //take it out of free list
-    //         prev->next = cur->next;
-    //         // cur->next = cur->next->next; //is this how we remove from the free list?
-    //         return get_payload(cur);
-    //     }else if(get_size(cur) - sizeof(memory_block_t) > size){ //do split later but for now, just get rid of the block
-    //         // memory_block_t *result = cur;
-    //         // result = split(cur, size);
-    //         found = true;
-    //         allocate(cur);
-    //         prev->next = cur->next;
-    //         // cur->next = cur->next->next; //is this how we remove from the free list?
-    //         return get_payload(cur);
-    //     }else if(cur->block_size_alloc < size){
-    //         if(cur->next == NULL){
-    //             free_head = csbrk(size);
-    //             found = true;
-    //         }
-    //         //we want to check the free list
-    //         prev = cur;
-    //         cur = cur->next; //loop
-    //         //and then return a new block  
-    //     }
-    //}
-    
-    
     return NULL;
 }
 
