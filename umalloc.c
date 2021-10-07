@@ -180,7 +180,7 @@ memory_block_t *coalesce(memory_block_t *block) {
     // }
     memory_block_t *bfree = sbnext;
     if(block->next != NULL){
-            sbnext = bfree->next;
+            memory_block_t *sbnext = bfree->next;
     }
     //pointers can't move backwards can they? this isn't illegal tho?
     memory_block_t *temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
