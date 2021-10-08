@@ -154,8 +154,9 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     put_block(temp, sblock, true);
     //make sure the other block is free, but do we need to put and return another block for that?
     //math outside
-    size_t math = get_size(block) - sizeof(temp);
-    put_block(bfree, math, false);
+    // size_t math = get_size(block) - sizeof(temp);
+    // bfree = 
+    put_block(bfree, size, false);
     return temp;
 }
 
@@ -180,7 +181,7 @@ memory_block_t *coalesce(memory_block_t *block) {
     // }
     memory_block_t *bfree = sbnext;
     if(block->next != NULL){
-            memory_block_t *sbnext = bfree->next;
+        sbnext = bfree->next;
     }
     //pointers can't move backwards can they? this isn't illegal tho?
     memory_block_t *temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
