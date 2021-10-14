@@ -213,8 +213,9 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     //putting a block of this size into the list
     //return free
     //create a temporary pointer 
-    memory_block_t *temp = block; 
-    memory_block_t *bfree = block;
+    // block->block_size_alloc = get_size(block) - size;
+    // memory_block_t *temp = block; 
+    // memory_block_t *bfree = block;
     // memory_block_t *stnext = block->next;
     // memory_block_t *bbefo = findBefore(block);
     //get the pointer to a place on the block where we want to split using pointer arithmatic
@@ -223,21 +224,21 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     //if there is an error check if we add temp to itself,, do i call malloc on this? you don't because i would call split 
     //in malloc which would lead to a lgic error
     size_t math = get_size(block) - size;
-    temp = (memory_block_t*) ((char*)temp + math); //allocated? i am missing 8 bytes somewhere
+    memory_block_t *temp = (memory_block_t*) ((char*)block + get_size(block) - size); //allocated? i am missing 8 bytes somewhere
     //once we have moved the pointer, we want to clarify this as a new block that is taken, get_size is returning 0;
-    size_t sblock = (size_t)size;
     // allocate(temp);
+    put_block(temp, size, true);
     // temp->block_size_alloc = sblock;
-    // temp->next = NULL;
-    put_block(temp, sblock, true);
+    // temp->next = stnext;
+    // block->next = temp;
     //make sure the other block is free, but do we need to put and return another block for that?
     //math outside
     // bfree = 
     // block->block_size_alloc = math + sizeof(memory_block_t);
     // bfree->block_size_alloc = math;
 
-    put_block(bfree, math, false);
-    // bfree->next = stnext;
+    put_block(block, math, false);
+    // block->next = stnext;
     // bfree->next = temp;
     // temp->next = stnext;
     //adding bfree to the free list
@@ -339,10 +340,10 @@ void *umalloc(size_t size) {
             }
         }
     }
-    // if (get_size(cur) > size && (get_size(cur) - sizeof(memory_block_t) > size)){
-    //     cur = split(cur, size);
-    //     return get_payload(cur);
-    // }
+    if (get_size(cur) > size && (get_size(cur) - (2 * sizeof(memory_block_t)) > size)){ //&&n
+        cur = split(cur, size);
+        return get_payload(cur);
+    }
     size_t math = get_size(cur);
     put_block(cur, math, true);
     allocate(cur);
@@ -377,7 +378,7 @@ void ufree(void *ptr) {
     memory_block_t *compare = get_block(ptr);
     memory_block_t *cur = free_head;
     bool added = false;
-    if(!compare){
+    if(compare == NULL){
         return;
     }
     if(compare < free_head){
@@ -394,7 +395,7 @@ void ufree(void *ptr) {
             added = true;
             return;
         }
-        cur = cur->next;
+        cur = cur->next; 
     }
     //the case where cur->next is null and we are at the end of the list
     if(cur->next == NULL){
