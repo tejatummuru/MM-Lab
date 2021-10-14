@@ -6,7 +6,7 @@ extern memory_block_t *free_head;
 int totalf = 0;
 extern int ftotal;
 
-/*
+/* person
  * check_heap -  used to check that the heap is still in a consistent state.
  * Required to be completed for checkpoint 1.
  * Should return 0 if the heap is still consistent, otherwise return a non-zero

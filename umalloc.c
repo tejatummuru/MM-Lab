@@ -4,6 +4,22 @@
 #include <stdio.h>
 #include <assert.h>
 
+/*
+* The structure of my free blocks is that they are all connected to the free head and 
+* my free list is organized in ascending order in order to make the traversal much easier
+* and in order to access memory in a first fit algorithmic system. The structure of my free blocks is 
+* not circular because I didn't want to implement a prev pointer, as there would be a lot more to adjust
+* for the few occassions i would've needed to access the previous pointer. Whenever the user calls 
+* malloc, the methos goes througb the entire free list and finds the first space big enough. if it doesn't 
+* find anything, it goes through and coalesces everything together and then calls the find function again to see if 
+* any new possible blocks opened up. If nothing is returned again, then there is no avaialable space, so extend is called
+* which will open up a big block and since we don't want to give away that much space to a small amount of memory,
+* the split function is called to get a more precise amount and the allocated block that has been split will be returned. 
+* when the user calls to free a certain block, the pointer of the block is converted to the block we are trying to free, and
+* the address of the block is compared to address of the other free blocks in the list and it is added into the right
+* chronological place. 
+*/
+
 const char author[] = ANSI_BOLD ANSI_COLOR_RED "TEJASVINI TUMMURU TT26586" ANSI_RESET;
 /*
  * The following helpers can be used to interact with the memory_block_t
@@ -66,7 +82,12 @@ void put_block(memory_block_t *block, size_t size, bool alloc) {
     block->block_size_alloc = size | alloc;
     block->next = NULL;
 }
-
+void put_blocknn(memory_block_t *block, size_t size, bool alloc) {
+    assert(block != NULL);
+    assert(size % ALIGNMENT == 0);
+    assert(alloc >> 1 == 0);
+    block->block_size_alloc = size | alloc;
+}
 /*
  * get_payload - gets the payload of the block.
  */
@@ -90,52 +111,103 @@ memory_block_t *get_block(void *payload) {
 
 /*
  * find - finds a free block that can satisfy the umalloc request.
- * todo
+ *  by using a while loop to find the size of the first block that is big 
+ * enough to satisfy its request
  */
 memory_block_t *find(size_t size) {
     memory_block_t *cur = free_head;
     bool found = false;
-    while(cur->next != NULL && found == false){
-        if(get_size(cur) >= size){
+    while(cur != NULL && found == false){ //cur or cur->next?
+        if(get_size(cur) >= size){ //not including header, so add seperately?
             found = true;
             return cur;
         }
         cur = cur->next;
     }
+    // if(cur!= NULL){
+    //     if(get_size(cur) + sizeof(memory_block_t) >= size){
+    //         found = true;
+    //         return cur;
+    //     }
+    // }
     return NULL;
 }
 
 /*
 *finds the previous of a current
+* by using the same while loop and 
+* having a double trail that will stop when the pointer it is following
+* reaching the current block/destination
 */
 memory_block_t *findBefore(memory_block_t *block){
-    memory_block_t *cur = block;
-    memory_block_t *prev = free_head;
-    while(prev->next != NULL && prev != cur){
-        if(prev->next == cur){
+    memory_block_t *cur = free_head;
+    memory_block_t *prev = NULL;
+    //make the freehead based off of this instead, and find way to get size of to the beginning of the pointer, it is only going
+    //through things in the free list, so we can't be sure the blocks are all next to each other
+    // prev = (memory_block_t*)((char*)cur - (sizeof(memory_block_t)/2)); //minus 1 byte or 8 for pointer? does this go to a block even if it doesn't exist?
+    // if(prev == NULL){
+    //     return cur;
+    // }
+    // prev = (memory_block_t*)((char*)prev - get_size(prev) - (sizeof(memory_block_t)/2));
+    // return prev;
+    // prev = (memory_block_t*)((char*)cur - (sizeof(memory_block_t) + get_size(cur)))
+    
+    while (cur != NULL){
+        if(cur == block){
             return prev;
         }
-        prev = prev->next;
+        prev = cur;
+        cur = cur->next;
     }
-    if(prev == cur){
-        return cur;
-    }
+    
+    // if(cur->next == NULL || cur == free_head){
+    //     return NULL;
+    // }
+
+    // if(cur == free_head || prev == NULL){
+    //     return NULL;
+    // }
+    // while(prev->next != NULL && prev < cur){
+    //     if(prev->next >= cur){
+    //         return prev;
+    //     }
+    //     prev = prev->next;
+    // }
+    // if(prev == cur){
+    //     return prev;
+    // }
     return NULL;
 }
 
 
 /*
  * extend - extends the heap if more memory is required.
- * todo
+ * by calling cs break and adding more memory and containing
+ * it in a block so it can all be accounted for and added to
+ * the free list
  */
 memory_block_t *extend(size_t size) {
-    ftotal+=16*PAGESIZE;
-    return csbrk(16 * PAGESIZE);
+    ftotal+=15*PAGESIZE;
+    memory_block_t *more = csbrk(15 * PAGESIZE);
+    memory_block_t *ftemp = free_head;
+    size_t math = 15*PAGESIZE - sizeof(memory_block_t );
+    put_block(more, math, false);
+    if(ftemp == NULL){
+        ftemp = more;
+        return more;
+    }
+    while(ftemp->next != NULL){
+        ftemp = ftemp->next;
+    }
+    ftemp->next = more;
+    more->next = NULL;
+    return more;
 }
 
 /*
  * split - splits a given block in parts, one allocated, one free.
- * todo
+ * by creating a new block that starts at the pointer address of the size and
+ * reassigning the pointers
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
     //putting a block of this size into the list
@@ -143,26 +215,42 @@ memory_block_t *split(memory_block_t *block, size_t size) {
     //create a temporary pointer 
     memory_block_t *temp = block; 
     memory_block_t *bfree = block;
+    // memory_block_t *stnext = block->next;
+    // memory_block_t *bbefo = findBefore(block);
     //get the pointer to a place on the block where we want to split using pointer arithmatic
     //the components of this are the original temp + the header size(because I believe  its not included) + 
     //(the size of the block - the size we want allocated since we do not want to reassign the pointers),, 
     //if there is an error check if we add temp to itself,, do i call malloc on this? you don't because i would call split 
     //in malloc which would lead to a lgic error
-    temp = (memory_block_t*) ((char*)temp + (sizeof(memory_block_t) + (get_size(block) - size))); //allocated?
-    //once we have moved the pointer, we want to clarify this as a new block that is taken
-    size_t sblock = get_size(temp);
+    size_t math = get_size(block) - size;
+    temp = (memory_block_t*) ((char*)temp + math); //allocated? i am missing 8 bytes somewhere
+    //once we have moved the pointer, we want to clarify this as a new block that is taken, get_size is returning 0;
+    size_t sblock = (size_t)size;
+    // allocate(temp);
+    // temp->block_size_alloc = sblock;
+    // temp->next = NULL;
     put_block(temp, sblock, true);
     //make sure the other block is free, but do we need to put and return another block for that?
     //math outside
-    // size_t math = get_size(block) - sizeof(temp);
     // bfree = 
-    put_block(bfree, size, false);
+    // block->block_size_alloc = math + sizeof(memory_block_t);
+    // bfree->block_size_alloc = math;
+
+    put_block(bfree, math, false);
+    // bfree->next = stnext;
+    // bfree->next = temp;
+    // temp->next = stnext;
+    //adding bfree to the free list
+    // memory_block_t *temph = free_head;
+     
+    // bbefo->next = bfree;
+    // temp->next = stnext;
     return temp;
 }
 
 /*
  * coalesce - coalesces a free memory block with neighbors.
- * todo
+ * by reassigning the pointers and adjusting the size to be one full block
  */
 memory_block_t *coalesce(memory_block_t *block) {
     //make sure the payload is being added correctly and the temp is getting the right values
@@ -183,15 +271,14 @@ memory_block_t *coalesce(memory_block_t *block) {
     if(block->next != NULL){
         sbnext = bfree->next;
     }
-    //pointers can't move backwards can they? this isn't illegal tho?
     memory_block_t *temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
     if(temp == block && !is_allocated(block->next)){
         // bfree = (memory_block_t*)((char*) block + sizeof(memory_block_t) + get_size(bfree));
-        size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
+        size_t gmath = get_size(bfree) + get_size(block);
+        //+ sizeof(memory_block_t)
         put_block(block, gmath , false);
-        if(bfree->next != NULL){
-            block->next = sbnext;
-        }
+        block->next = sbnext;
+        
     }
     return block;
 }
@@ -201,12 +288,14 @@ memory_block_t *coalesce(memory_block_t *block) {
 /*
  * uinit - Used initialize metadata required to manage the heap
  * along with allocating initial memory.
- * todo
+ * 
  */
 int uinit() {
-    free_head = csbrk(PAGESIZE * 5);
-    ftotal += PAGESIZE * 5;
-    put_block(free_head, PAGESIZE * 5, false);
+    free_head = csbrk(PAGESIZE * 3);
+    // printf("%p\n", free_head);
+    ftotal += PAGESIZE * 3;
+    size_t gmath = PAGESIZE * 3 - sizeof(memory_block_t);
+    put_block(free_head, gmath , false);
     // free_head->next = NULL;
     //set size, next, 
    //how do i set the metadata? like allocated = true? where do i do that? also where do i do the if else for this
@@ -219,59 +308,99 @@ int uinit() {
 
 /*
  * umalloc -  allocates size bytes and returns a pointer to the allocated memory.
- * todo
+ * find a block that can have as much space as the user requests and puts the memory in the block
  */
 void *umalloc(size_t size) {
-    
+    size = ALIGN(size);
     memory_block_t *cur = find(size);
+    memory_block_t *temp = free_head;
+    // if(get_size(cur) == size && cur->next == NULL){
+    //     if(cur == free_head){
+    //         cur->next = free_head;
+    //         return get_payload(cur);
+    //     }
+    //      else{
+    //         memory_block_t *bef = findBefore(cur);
+    //         bef->next = cur->next;
+    //         return get_payload(cur);
+    //     }
+    // }
     if(cur == NULL){
-        cur = free_head;
-        while (cur->next != NULL){
-            coalesce(cur);
-            cur = cur->next;
+        while (temp->next != NULL){
+            cur = coalesce(temp);
+            temp = temp->next;
         }
+        temp = free_head;
         cur = find(size);
         if(cur == NULL){
-            cur = extend(size);
+            cur = extend(size); //do we add this extend into the list?
+            if(cur == NULL){
+                return NULL;
+            }
         }
     }
-    if (get_size(cur) > size){
-        cur = split(cur, size);
-    }
-    put_block(cur, get_size(cur), true);
+    // if (get_size(cur) > size && (get_size(cur) - sizeof(memory_block_t) > size)){
+    //     cur = split(cur, size);
+    //     return get_payload(cur);
+    // }
+    size_t math = get_size(cur);
+    put_block(cur, math, true);
     allocate(cur);
     //must remove from free liost
     memory_block_t *prev = findBefore(cur);
-    if(cur->next != NULL){
+    // if(cur->next != NULL && prev!=cur){
+    if(prev != NULL){
+        if(cur->next == NULL){
+            prev->next = NULL;
+        }
         prev->next = cur->next;
+    }else{
+        //this means that the free head is filled up
+        free_head = free_head->next;
+        if(free_head == NULL){
+            free_head = extend(size);
+        }
     }
     ftotal-=size;
     return get_payload(cur);
     return NULL;
+    // return NULL;
 }
 
 /*
  * ufree -  frees the memory space pointed to by ptr, which must have been called
  * by a previous call to malloc.
- * todo
+ * frees a block by adding it to the free list by adjusting pointers to point to 
+ * the new block in the right places
  */
 void ufree(void *ptr) {
     memory_block_t *compare = get_block(ptr);
-    deallocate(compare);
-    put_block(compare, get_size(compare), is_allocated(compare));
-    //get_block to translate to payload->block
-    //put_block to make free block and then while loop
     memory_block_t *cur = free_head;
-    //do i just call put instead of a;ll this?
     bool added = false;
-    while (cur->next != NULL && added == false){
-        //just compare pointers
+    if(!compare){
+        return;
+    }
+    if(compare < free_head){
+        memory_block_t *tfree = free_head;
+        free_head = compare;
+        free_head->next = tfree;
+    }else{
+        while (cur->next != NULL && added == false){
         if(compare < cur){ //& working?
+            memory_block_t *bblock = findBefore(cur);
             //change prev?
+            bblock->next = compare;
             compare->next = cur;
             added = true;
             return;
         }
         cur = cur->next;
     }
+    //the case where cur->next is null and we are at the end of the list
+    if(cur->next == NULL){
+        cur->next = compare;
+        compare->next = NULL;
+        }
+    }
+    deallocate(compare);
 }
