@@ -117,19 +117,16 @@ memory_block_t *get_block(void *payload) {
 memory_block_t *find(size_t size) {
     memory_block_t *cur = free_head;
     bool found = false;
-    while(cur != NULL && found == false){ //cur or cur->next?
-        if(get_size(cur) >= size){ //not including header, so add seperately?
+    //goes through the list until it reaches the end
+    while(cur != NULL && found == false){ 
+        //if the size of the block is greater than or equal to the size of the request
+        if(get_size(cur) >= size){ 
             found = true;
             return cur;
         }
+        //moves pointer
         cur = cur->next;
     }
-    // if(cur!= NULL){
-    //     if(get_size(cur) + sizeof(memory_block_t) >= size){
-    //         found = true;
-    //         return cur;
-    //     }
-    // }
     return NULL;
 }
 
@@ -140,42 +137,19 @@ memory_block_t *find(size_t size) {
 * reaching the current block/destination
 */
 memory_block_t *findBefore(memory_block_t *block){
+    //head and tail
     memory_block_t *cur = free_head;
     memory_block_t *prev = NULL;
-    //make the freehead based off of this instead, and find way to get size of to the beginning of the pointer, it is only going
-    //through things in the free list, so we can't be sure the blocks are all next to each other
-    // prev = (memory_block_t*)((char*)cur - (sizeof(memory_block_t)/2)); //minus 1 byte or 8 for pointer? does this go to a block even if it doesn't exist?
-    // if(prev == NULL){
-    //     return cur;
-    // }
-    // prev = (memory_block_t*)((char*)prev - get_size(prev) - (sizeof(memory_block_t)/2));
-    // return prev;
-    // prev = (memory_block_t*)((char*)cur - (sizeof(memory_block_t) + get_size(cur)))
-    
     while (cur != NULL){
+        //if the head is at the block
         if(cur == block){
+            //returns tail
             return prev;
         }
+        //tail becomes head, head moves forward
         prev = cur;
         cur = cur->next;
     }
-    
-    // if(cur->next == NULL || cur == free_head){
-    //     return NULL;
-    // }
-
-    // if(cur == free_head || prev == NULL){
-    //     return NULL;
-    // }
-    // while(prev->next != NULL && prev < cur){
-    //     if(prev->next >= cur){
-    //         return prev;
-    //     }
-    //     prev = prev->next;
-    // }
-    // if(prev == cur){
-    //     return prev;
-    // }
     return NULL;
 }
 
@@ -188,24 +162,21 @@ memory_block_t *findBefore(memory_block_t *block){
  */
 memory_block_t *extend(size_t size) {
     ftotal+=size;
+    //stores memory in a block
     memory_block_t *more = csbrk(size + sizeof(memory_block_t));
     memory_block_t *ftemp = free_head;
-    // memory_block_t *temp = free_head;
-    // size_t math = size + sizeof(memory_block_t );
-    // put_block(more, math, false);
+    //if no freehead, this block becomes the freehead
     if(ftemp == NULL){
         ftemp = more;
         return more;
     }
+    //goes to the end of the free list
     while(ftemp->next != NULL){
         ftemp = ftemp->next;
     }
-    // more->block_size_alloc = math;
+    //adds to the end of the list
     ftemp->next = more;
     more->next = NULL;
-    // while (temp->next != NULL){
-    //         temp = coalesce(temp);
-    //     }
     return more;
 }
 
@@ -215,10 +186,13 @@ memory_block_t *extend(size_t size) {
  * reassigning the pointers
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
+    //changes pointer to the header of the second block
     size_t free_space = get_size(block) - size;
-    memory_block_t *temp = (memory_block_t*) ((char*)block + free_space); //allocated? i am missing 8 bytes somewhere
+    memory_block_t *temp = (memory_block_t*) ((char*)block + free_space); 
+    //updates parameters
     put_block(temp, size, true);
     put_block(block, free_space - sizeof(memory_block_t), false);
+    //coalesces to keep space
     while (temp->next != NULL){
         temp = coalesce(temp);
     }
@@ -230,33 +204,22 @@ memory_block_t *split(memory_block_t *block, size_t size) {
  * by reassigning the pointers and adjusting the size to be one full block
  */
 memory_block_t *coalesce(memory_block_t *block) {
-    //make sure the payload is being added correctly and the temp is getting the right values
-    //make sure the next and prev are right next to each other by adding the size the header and size of the payload and seeing if it adds to the next
-    // memory_block_t *bfree = findBefore(block); 
-    // memory_block_t *temp = (memory_block_t*)((char*)bfree + sizeof(memory_block_t) + get_size(block));
-    //header 
+    //stores pointers
     memory_block_t *sbnext = block->next;
-    //no previous needed
-    //only coalesce when free
-    // if(temp == block && !is_allocated(bfree)){
-    //     bfree = (memory_block_t*)((char*) get_size(bfree) + sizeof(memory_block_t) + get_size(block));
-    //     size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
-    //     put_block(bfree, gmath , false);
-    //     bfree->next = sbnext;
-    // }
     memory_block_t *bfree = sbnext;
     if(block->next != NULL){
         sbnext = bfree->next;
     }
+    //gets previous block
     memory_block_t *temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
     if(temp == block && !is_allocated(block->next)){
-        // bfree = (memory_block_t*)((char*) block + sizeof(memory_block_t) + get_size(bfree));
+        //updates the block parameters and pointers
         size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
-        //+ sizeof(memory_block_t)
         put_block(temp, gmath , false);
         temp->next = sbnext;
             return temp;
     }else{
+        //updates the pointer
         return block->next;
     }
 }
@@ -269,15 +232,11 @@ memory_block_t *coalesce(memory_block_t *block) {
  * 
  */
 int uinit() {
+    //initializes everything
     free_head = csbrk(PAGESIZE * 5);
-    // printf("%p\n", free_head);
     ftotal += PAGESIZE * 5;
     size_t gmath = PAGESIZE * 5 - sizeof(memory_block_t);
     put_block(free_head, gmath , false);
-    // free_head->next = NULL;
-    //set size, next, 
-   //how do i set the metadata? like allocated = true? where do i do that? also where do i do the if else for this
-
    if(free_head == NULL){
        return -1;
    }
@@ -290,31 +249,36 @@ int uinit() {
  */
 void *umalloc(size_t size) {
     size = ALIGN(size);
+    //finds the first block
     memory_block_t *cur = find(size);
+    //if no block is found, the heap is extended and a new block is added to the list
         if(cur == NULL){
-            cur = extend(size); //do we add this extend into the list?
+            cur = extend(size); 
             if(cur == NULL){
                 return NULL;
             }
         }
+    //after the giant extend, the block is split so more free space is available
     if (get_size(cur) > size && (get_size(cur) - (2 * sizeof(memory_block_t)) > size)){ //&&n
         cur = split(cur, size);
         return get_payload(cur);
     }
+    //the block is updates
     size_t math = get_size(cur);
     put_block(cur, math, true);    
 
-    //must remove from free liost
+    //must remove from free list
     memory_block_t *prev = findBefore(cur);
     if(prev != NULL){
         prev->next = cur->next;
     }else{
-        //this means that the free head is filled up
+        //this means that the free head is filled up, so we update the new freehead
         free_head = free_head->next;
         if(free_head == NULL){
             free_head = extend(size);
         }
     }
+    //payload is returned
     ftotal-=size;
     return get_payload(cur);
     return NULL;
@@ -327,46 +291,54 @@ void *umalloc(size_t size) {
  * the new block in the right places
  */
 void ufree(void *ptr) {
+    //the pointer is converted to a block and deallocated
     memory_block_t *compare = get_block(ptr);
     memory_block_t *cur = free_head;
     memory_block_t *temp = free_head;
     memory_block_t *prevf = NULL;
     deallocate(compare);
     bool added = false;
+    //if no block, ABORT!!!
     if(compare == NULL){
-
         return;
     }
+    //if the address is lower or no free_head, the new free_head is updates
     if(compare < free_head || free_head == NULL){
         memory_block_t *tfree = free_head;
         free_head = compare;
         free_head->next = tfree;
         temp = free_head;
     }else{
+        //or else the address's rightful place is found
         while (cur != NULL && added == false){
-            // coalesce(cur);
-            if(compare < cur){ //& working?
+            //finds the right address
+            if(compare < cur){ 
+                //pointers are updates to bring in the new block
                 memory_block_t *bblock = findBefore(cur);
                 //change prev?
                 bblock->next = compare;
                 compare->next = cur;
                 added = true;
+                //everything is coalesced after the new block is added
                 while (temp->next != NULL){
                     temp = coalesce(temp);
                 }
                 return;
             }
+        //on the occassion we have a null cur, we must now add to the end of the list  
         prevf = cur;
         cur = cur->next; 
     }
     //the case where cur->next is null and we are at the end of the list
     if(cur == NULL){
         if(prevf != NULL){
+                //added to the end
                 prevf->next = compare;
                 compare->next = cur;
             }
         }
     }
+    //and everything is coalesced again after adding the new block
     temp = free_head;
     while (temp->next != NULL){
         temp = coalesce(temp);
