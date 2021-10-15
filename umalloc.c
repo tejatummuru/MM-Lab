@@ -187,11 +187,12 @@ memory_block_t *findBefore(memory_block_t *block){
  * the free list
  */
 memory_block_t *extend(size_t size) {
-    ftotal+=15*PAGESIZE;
-    memory_block_t *more = csbrk(15 * PAGESIZE);
+    ftotal+=size;
+    memory_block_t *more = csbrk(size + sizeof(memory_block_t));
     memory_block_t *ftemp = free_head;
-    size_t math = 15*PAGESIZE - sizeof(memory_block_t );
-    put_block(more, math, false);
+    memory_block_t *temp = free_head;
+    // size_t math = size + sizeof(memory_block_t );
+    // put_block(more, math, false);
     if(ftemp == NULL){
         ftemp = more;
         return more;
@@ -199,8 +200,12 @@ memory_block_t *extend(size_t size) {
     while(ftemp->next != NULL){
         ftemp = ftemp->next;
     }
+    // more->block_size_alloc = math;
     ftemp->next = more;
     more->next = NULL;
+    while (temp->next != NULL){
+            temp = coalesce(temp);
+        }
     return more;
 }
 
@@ -210,42 +215,13 @@ memory_block_t *extend(size_t size) {
  * reassigning the pointers
  */
 memory_block_t *split(memory_block_t *block, size_t size) {
-    //putting a block of this size into the list
-    //return free
-    //create a temporary pointer 
-    // block->block_size_alloc = get_size(block) - size;
-    // memory_block_t *temp = block; 
-    // memory_block_t *bfree = block;
-    // memory_block_t *stnext = block->next;
-    // memory_block_t *bbefo = findBefore(block);
-    //get the pointer to a place on the block where we want to split using pointer arithmatic
-    //the components of this are the original temp + the header size(because I believe  its not included) + 
-    //(the size of the block - the size we want allocated since we do not want to reassign the pointers),, 
-    //if there is an error check if we add temp to itself,, do i call malloc on this? you don't because i would call split 
-    //in malloc which would lead to a lgic error
-    size_t math = get_size(block) - size;
-    memory_block_t *temp = (memory_block_t*) ((char*)block + get_size(block) - size); //allocated? i am missing 8 bytes somewhere
-    //once we have moved the pointer, we want to clarify this as a new block that is taken, get_size is returning 0;
-    // allocate(temp);
+    size_t free_space = get_size(block) - size;
+    memory_block_t *temp = (memory_block_t*) ((char*)block + free_space); //allocated? i am missing 8 bytes somewhere
     put_block(temp, size, true);
-    // temp->block_size_alloc = sblock;
-    // temp->next = stnext;
-    // block->next = temp;
-    //make sure the other block is free, but do we need to put and return another block for that?
-    //math outside
-    // bfree = 
-    // block->block_size_alloc = math + sizeof(memory_block_t);
-    // bfree->block_size_alloc = math;
-
-    put_block(block, math, false);
-    // block->next = stnext;
-    // bfree->next = temp;
-    // temp->next = stnext;
-    //adding bfree to the free list
-    // memory_block_t *temph = free_head;
-     
-    // bbefo->next = bfree;
-    // temp->next = stnext;
+    put_block(block, free_space - sizeof(memory_block_t), false);
+    while (temp->next != NULL){
+        temp = coalesce(temp);
+    }
     return temp;
 }
 
@@ -275,13 +251,14 @@ memory_block_t *coalesce(memory_block_t *block) {
     memory_block_t *temp = (memory_block_t*)((char*)bfree - (sizeof(memory_block_t) + get_size(block)));
     if(temp == block && !is_allocated(block->next)){
         // bfree = (memory_block_t*)((char*) block + sizeof(memory_block_t) + get_size(bfree));
-        size_t gmath = get_size(bfree) + get_size(block);
+        size_t gmath = get_size(bfree) + get_size(block) + sizeof(memory_block_t);
         //+ sizeof(memory_block_t)
-        put_block(block, gmath , false);
-        block->next = sbnext;
-        
+        put_block(temp, gmath , false);
+        temp->next = sbnext;
+            return temp;
+    }else{
+        return block->next;
     }
-    return block;
 }
 
 
@@ -292,10 +269,10 @@ memory_block_t *coalesce(memory_block_t *block) {
  * 
  */
 int uinit() {
-    free_head = csbrk(PAGESIZE * 3);
+    free_head = csbrk(PAGESIZE * 5);
     // printf("%p\n", free_head);
-    ftotal += PAGESIZE * 3;
-    size_t gmath = PAGESIZE * 3 - sizeof(memory_block_t);
+    ftotal += PAGESIZE * 5;
+    size_t gmath = PAGESIZE * 5 - sizeof(memory_block_t);
     put_block(free_head, gmath , false);
     // free_head->next = NULL;
     //set size, next, 
@@ -314,46 +291,22 @@ int uinit() {
 void *umalloc(size_t size) {
     size = ALIGN(size);
     memory_block_t *cur = find(size);
-    memory_block_t *temp = free_head;
-    // if(get_size(cur) == size && cur->next == NULL){
-    //     if(cur == free_head){
-    //         cur->next = free_head;
-    //         return get_payload(cur);
-    //     }
-    //      else{
-    //         memory_block_t *bef = findBefore(cur);
-    //         bef->next = cur->next;
-    //         return get_payload(cur);
-    //     }
-    // }
-    if(cur == NULL){
-        while (temp->next != NULL){
-            cur = coalesce(temp);
-            temp = temp->next;
-        }
-        temp = free_head;
-        cur = find(size);
         if(cur == NULL){
             cur = extend(size); //do we add this extend into the list?
             if(cur == NULL){
                 return NULL;
             }
         }
-    }
     if (get_size(cur) > size && (get_size(cur) - (2 * sizeof(memory_block_t)) > size)){ //&&n
         cur = split(cur, size);
         return get_payload(cur);
     }
     size_t math = get_size(cur);
-    put_block(cur, math, true);
-    allocate(cur);
+    put_block(cur, math, true);    
+
     //must remove from free liost
     memory_block_t *prev = findBefore(cur);
-    // if(cur->next != NULL && prev!=cur){
     if(prev != NULL){
-        if(cur->next == NULL){
-            prev->next = NULL;
-        }
         prev->next = cur->next;
     }else{
         //this means that the free head is filled up
@@ -365,7 +318,6 @@ void *umalloc(size_t size) {
     ftotal-=size;
     return get_payload(cur);
     return NULL;
-    // return NULL;
 }
 
 /*
@@ -377,31 +329,45 @@ void *umalloc(size_t size) {
 void ufree(void *ptr) {
     memory_block_t *compare = get_block(ptr);
     memory_block_t *cur = free_head;
+    memory_block_t *temp = free_head;
+    memory_block_t *prevf = NULL;
     bool added = false;
     if(compare == NULL){
         return;
     }
-    if(compare < free_head){
+    if(compare < free_head || free_head == NULL){
         memory_block_t *tfree = free_head;
         free_head = compare;
         free_head->next = tfree;
+        temp = free_head;
     }else{
-        while (cur->next != NULL && added == false){
-        if(compare < cur){ //& working?
-            memory_block_t *bblock = findBefore(cur);
-            //change prev?
-            bblock->next = compare;
-            compare->next = cur;
-            added = true;
-            return;
-        }
+        while (cur != NULL && added == false){
+            // coalesce(cur);
+            if(compare < cur){ //& working?
+                memory_block_t *bblock = findBefore(cur);
+                //change prev?
+                bblock->next = compare;
+                compare->next = cur;
+                added = true;
+                while (temp->next != NULL){
+                    temp = coalesce(temp);
+                }
+                return;
+            }
+        prevf = cur;
         cur = cur->next; 
     }
     //the case where cur->next is null and we are at the end of the list
-    if(cur->next == NULL){
-        cur->next = compare;
-        compare->next = NULL;
+    if(cur == NULL){
+        if(prevf != NULL){
+                prevf->next = compare;
+                compare->next = cur;
+            }
         }
+    }
+    temp = free_head;
+    while (temp->next != NULL){
+        temp = coalesce(temp);
     }
     deallocate(compare);
 }
