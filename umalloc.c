@@ -190,7 +190,7 @@ memory_block_t *extend(size_t size) {
     ftotal+=size;
     memory_block_t *more = csbrk(size + sizeof(memory_block_t));
     memory_block_t *ftemp = free_head;
-    memory_block_t *temp = free_head;
+    // memory_block_t *temp = free_head;
     // size_t math = size + sizeof(memory_block_t );
     // put_block(more, math, false);
     if(ftemp == NULL){
@@ -203,9 +203,9 @@ memory_block_t *extend(size_t size) {
     // more->block_size_alloc = math;
     ftemp->next = more;
     more->next = NULL;
-    while (temp->next != NULL){
-            temp = coalesce(temp);
-        }
+    // while (temp->next != NULL){
+    //         temp = coalesce(temp);
+    //     }
     return more;
 }
 
@@ -331,8 +331,10 @@ void ufree(void *ptr) {
     memory_block_t *cur = free_head;
     memory_block_t *temp = free_head;
     memory_block_t *prevf = NULL;
+    deallocate(compare);
     bool added = false;
     if(compare == NULL){
+
         return;
     }
     if(compare < free_head || free_head == NULL){
@@ -369,5 +371,4 @@ void ufree(void *ptr) {
     while (temp->next != NULL){
         temp = coalesce(temp);
     }
-    deallocate(compare);
 }
